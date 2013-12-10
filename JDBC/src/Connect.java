@@ -15,90 +15,6 @@ public class Connect
 		stmt.execute("SET sql_log_bin = 0");
 	}
 	
-	public static void create_table(java.sql.Statement stmt) throws SQLException
-	{
-		String SQLStatement ="";
-		
-		/*SQLStatement = "create table branches("
-				+ "branchid int not null,"
-				+ "branchname char(20) not null,"
-				+ "balance int not null,"
-				+ "address char(72) not null,"
-				+ "primary key (branchid))"
-				+ "ENGINE = MyISAM;";
-		stmt.execute(SQLStatement);
-		
-		SQLStatement = "create table accounts( "
-				+ "accid int not null,"
-				+ "name char(20) not null,"
-				+ "balance int not null,"
-				+ "branchid int not null,"
-				+ "address char(68) not null,"
-				+ "primary key (accid),"
-				+ "foreign key (branchid) references branches (branchid)) "
-				+ "ENGINE = MyISAM; ";
-		stmt.execute(SQLStatement);
-		
-		SQLStatement = "create table tellers("
-				+ "tellerid int not null,"
-				+ "tellername char(20) not null,"
-				+ "balance int not null,"
-				+ "branchid int not null,"
-				+ "address char(68) not null,"
-				+ "primary key (tellerid), "
-				+ "foreign key (branchid) references branches (branchid)) "
-				+ "ENGINE = MyISAM;";
-		stmt.execute(SQLStatement);*/
-		
-		SQLStatement = "create table history("
-				+ "accid int not null,"
-				+ "branchid int not null,"
-				+ "tellerid int not null,"
-				+ "delta int not null,"
-				+ "accbalance int not null,"
-				+ "cmmnt char(30) not null,"
-				+ "PRIMARY KEY (accid,branchid,tellerid,delta,accbalance,cmmnt)"
-				+ "foreign key (accid) references accounts (accid),"
-				+ "foreign key (tellerid) references tellers (tellerid),"
-				+ "foreign key (branchid) references branches (branchid)) "
-				+ "ENGINE = MyISAM; ";
-		stmt.execute(SQLStatement);
-	}
-	
-	public static void insert_into(int n, java.sql.Statement stmt, java.sql.PreparedStatement pstmt) throws SQLException
-	{
-		String sz20 = "bbbbbbbbbbbbbbbbbbbb";
-		String sz68 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-		String sz72 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-		XORShiftRandom xor = new XORShiftRandom();
-		
-		for(int i = 1; i <= n; i++)
-			stmt.executeUpdate("insert into branches values ("+i+", '"+sz20+"', 0, '"+sz72+"' );");
-	    int x = 1;
-		for(int i = 1; i <= n*100000; i++)
-		{
-			pstmt.setInt(x++, i);
-			pstmt.setString(x++, sz20);
-			pstmt.setInt(x++, i);
-			pstmt.setInt(x++, xor.nextInt(n));
-			pstmt.setString(x++, sz68);
-			if(i%1400 == 0)
-			{
-				pstmt.addBatch();
-				x = 1;
-				if(i%2800 == 0)
-				{
-					pstmt.executeBatch();
-					pstmt.clearBatch();
-				}
-			}
-		}
-		pstmt.executeBatch();
-		
-		for(int i = 1; i <= n*10; i++)
-			stmt.executeUpdate("insert into tellers values ("+i+",'"+sz20+"',0,"+xor.nextInt(n)+", '"+sz68+"');");
-	}
-	
 	public static int Kontostand_TX(java.sql.Statement stmt, int ACCID) throws SQLException
 	{
 		ResultSet rs = stmt.executeQuery("select balance from accounts where accid="+ACCID+";");
@@ -166,7 +82,7 @@ public class Connect
 		tend = System.currentTimeMillis() + iGesamtZeit;
 		tnow = System.currentTimeMillis();
 		tbeg = tnow;
-		//<ESC>[{ROW};{COLUMN}H
+		
 		while(tnow < tend )
 		{
 			switch(rand())
