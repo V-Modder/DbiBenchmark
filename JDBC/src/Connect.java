@@ -127,11 +127,6 @@ public class Connect
 		return rs.getInt(1);
 	}
 	
-	public static int Random_TX()
-	{
-		return 0;
-	}
-	
 	private static int rand()
 	{
 		Random rnd = new Random();
