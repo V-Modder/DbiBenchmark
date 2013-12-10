@@ -3,7 +3,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Random;
-
+import java.util.Scanner;
 
 public class Connect 
 {
@@ -144,13 +144,16 @@ public class Connect
 		long tnow, tend, tbeg;
 		java.sql.Statement stmt = null;
 		
+		Scanner scr = new Scanner(System.in);
 		final int iGesamtZeit = 60000;
 		final int iEinschwingZeit = 24000;
 		final int iAusschwingZeit = 54000;
 		String user = "root";
 		String pass = "janbe2013";
 		String DB = "benchmark";
-		String ConnectionName = "jdbc:mysql://localhost/" + DB;
+		System.out.print("DB-Server: ");
+		String ConnectionName = "jdbc:mysql://"+scr.nextLine()+"/" + DB;
+		scr.close();
 		
 		Connection con = DriverManager.getConnection(ConnectionName, user, pass);
 		stmt = con.createStatement();
@@ -159,11 +162,11 @@ public class Connect
 		//con.setAutoCommit(false);
 		//create_table(stmt);
 		delete_tables(stmt);
-		
 		Random r = new Random();
 		tend = System.currentTimeMillis() + iGesamtZeit;
 		tnow = System.currentTimeMillis();
 		tbeg = tnow;
+		//<ESC>[{ROW};{COLUMN}H
 		while(tnow < tend )
 		{
 			switch(rand())
@@ -185,7 +188,6 @@ public class Connect
 						iTxCount++;
 					break;
 			}
-			
 			try {
 				Thread.sleep(50);
 			} catch (InterruptedException e) {
@@ -194,7 +196,8 @@ public class Connect
 			}
 		}
 		
-		System.out.println("Tx: " + iTxCount + "\n");
+		System.out.println("Tx  : " + iTxCount);
+		System.out.println("TxPS: "+ java.lang.Math.round(iTxCount/((iAusschwingZeit-iEinschwingZeit)/1000)));
 		stmt.close();
 		con.close();
 	}
