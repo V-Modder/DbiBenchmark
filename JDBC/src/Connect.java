@@ -128,9 +128,15 @@ public class Connect implements Runnable
 		{
 			ObjectOutputStream oss = new ObjectOutputStream(Client.getOutputStream());
 			oss.writeObject(String.valueOf(iTxCount));
+			oss.close();
 		}
 		
-		
+		for(int i=0;i<Clients.size();i++)
+		{
+			Outputs.get(i).close();
+			Inputs.get(i).close();
+			Clients.get(i).close();
+		}
 		stmt.close();
 		con.close();
 	}
