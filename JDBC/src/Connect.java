@@ -203,6 +203,11 @@ public class Connect implements Runnable
 	
 	public static void main(String[] args) throws SQLException
 	{
-		
+		try {
+			Connect conc = new Connect();
+		} catch (ClassNotFoundException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
