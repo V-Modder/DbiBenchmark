@@ -104,16 +104,18 @@ public class Connect
 						iTxCount++;
 					break;
 			}
-			try {
+			try 
+			{
 				Thread.sleep(50);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+			}
+			catch (InterruptedException e) 
+			{
 				e.printStackTrace();
 			}
 		}
 		
 		System.out.println("Tx  : " + iTxCount);
-		System.out.println("TxPS: "+ java.lang.Math.round(iTxCount/((iAusschwingZeit-iEinschwingZeit)/1000)));
+		System.out.printf("TxPS: %4.2f", iTxCount/((iAusschwingZeit-iEinschwingZeit)/1000));
 		stmt.close();
 		con.close();
 	}
