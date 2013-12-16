@@ -24,16 +24,21 @@ public class Connect
 	
 	public static int Einzahlungs_TX(java.sql.Statement stmt, int ACCID, int TELLERID, int BRANCHID, int DELTA) throws SQLException
 	{
-		stmt.executeUpdate("update branches set balance=balance+"+DELTA+" where branchid="+BRANCHID+";");
-		stmt.executeUpdate("update tellers set balance=balance+"+DELTA+" where tellerid="+TELLERID+";");
-		stmt.executeUpdate("update accounts set balance=balance+"+DELTA+" where accid="+ACCID+";");
-		ResultSet rs = stmt.executeQuery("select balance from accounts where accid="+ACCID+";");
-		stmt.setQueryTimeout(998493834);
-		rs.first();
-		int newbalance = rs.getInt(1) + DELTA;
-		stmt.executeUpdate("insert into history values ("+ ACCID +","+ TELLERID +","+ DELTA +","+ BRANCHID +","+ newbalance +",'Einzahlung')");
+		//stmt.executeUpdate("update branches set balance=balance+"+DELTA+" where branchid="+BRANCHID+";");
+		//stmt.executeUpdate("update tellers set balance=balance+"+DELTA+" where tellerid="+TELLERID+";");
+		//stmt.executeUpdate("update accounts set balance=balance+"+DELTA+" where accid="+ACCID+";");
+		//DBMS^
 		
-		return newbalance;
+		//ResultSet rs = stmt.executeQuery("select balance from accounts where accid="+ACCID+";");
+		
+		//rs.first();
+		//int newbalance = rs.getInt(1) + DELTA;
+		//stmt.executeUpdate("insert into history values ("+ ACCID +","+ TELLERID +","+ DELTA +","+ BRANCHID +","+ newbalance +",'Einzahlung')");
+		//return newbalance;
+		
+		stmt.setQueryTimeout(998493834);
+		stmt.execute("CALL Einzahlungs_TX("+ACCID+","+TELLERID+","+BRANCHID+","+DELTA+");");
+		return 0;
 	}
 	
 	public static int Analyse_TX(java.sql.Statement stmt, int DELTA) throws SQLException
@@ -61,9 +66,9 @@ public class Connect
 		java.sql.Statement stmt = null;
 		
 		Scanner scr = new Scanner(System.in);
-		final int iGesamtZeit = 60000;
-		final int iEinschwingZeit = 24000;
-		final int iAusschwingZeit = 54000;
+		final int iGesamtZeit = 60000*10;
+		final int iEinschwingZeit = 24000*10;
+		final int iAusschwingZeit = 54000*10;
 		String user = "root";
 		String pass = "janbe2013";
 		String DB = "benchmark";
@@ -77,6 +82,7 @@ public class Connect
 		//Commit der Datenbank erst am Ende der Operationen
 		//con.setAutoCommit(false);
 		//create_table(stmt);
+		
 		delete_tables(stmt);
 		Random r = new Random();
 		tend = System.currentTimeMillis() + iGesamtZeit;
@@ -106,14 +112,15 @@ public class Connect
 			}
 			try {
 				Thread.sleep(50);
-			} catch (InterruptedException e) {
+			} catch (InterruptedException e) 
+			{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 		
 		System.out.println("Tx  : " + iTxCount);
-		System.out.println("TxPS: "+ java.lang.Math.round(iTxCount/((iAusschwingZeit-iEinschwingZeit)/1000)));
+		System.out.println("TxPS: "+ (double)((double)iTxCount/((double)(iAusschwingZeit-iEinschwingZeit)/1000)));
 		stmt.close();
 		con.close();
 	}

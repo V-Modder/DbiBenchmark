@@ -1,0 +1,18 @@
+-- --------------------------------------------------------------------------------
+-- Routine DDL
+-- Note: comments before and after the routine body will not be stored by the server
+-- --------------------------------------------------------------------------------
+DELIMITER $$
+
+CREATE DEFINER=`root`@`127.0.0.1` PROCEDURE `Einzahlungs_TX`(in nACCID int(11), in nTELLERID int(11), in nBRANCHID int(11), in DELTA int(11))
+BEGIN
+	DECLARE x INT DEFAULT 0;
+
+	update branches set balance=balance+DELTA where branchid=nBRANCHID;
+	update tellers  set balance=balance+DELTA where tellerid=nTELLERID;
+	update accounts set balance=balance+DELTA where accid=nACCID;
+	
+	select balance from accounts where accid=nACCID INTO x;
+	insert into history values (nACCID, nTELLERID, DELTA, nBRANCHID, x+DELTA,'Einzahlung');
+
+END
