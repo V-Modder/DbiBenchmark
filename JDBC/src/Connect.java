@@ -36,7 +36,7 @@ public class Connect
 		//stmt.executeUpdate("insert into history values ("+ ACCID +","+ TELLERID +","+ DELTA +","+ BRANCHID +","+ newbalance +",'Einzahlung')");
 		//return newbalance;
 		
-		stmt.setQueryTimeout(998493834);
+		//stmt.setQueryTimeout(998493834);
 		stmt.execute("CALL Einzahlungs_TX("+ACCID+","+TELLERID+","+BRANCHID+","+DELTA+");");
 		return 0;
 	}
@@ -62,14 +62,15 @@ public class Connect
 	public static void main(String[] args) throws SQLException
 	{
 		int iTxCount = 0;
+		int iPercent = 0;
 		long tnow, tend, tbeg;
 		java.sql.Statement stmt = null;
 		
 		Scanner scr = new Scanner(System.in);
-		final int iGesamtZeit = 60000*10;
-		final int iEinschwingZeit = 24000*10;
-		final int iAusschwingZeit = 54000*10;
-		String user = "root";
+		final int iGesamtZeit = 60000;
+		final int iEinschwingZeit = 24000;
+		final int iAusschwingZeit = 54000;
+		String user = "dbi";
 		String pass = "janbe2013";
 		String DB = "benchmark";
 		System.out.print("DB-Server: ");
@@ -85,40 +86,44 @@ public class Connect
 		
 		delete_tables(stmt);
 		Random r = new Random();
+		System.out.print("|1%_____________________50%____________________100%|\n|");
+		
 		tend = System.currentTimeMillis() + iGesamtZeit;
 		tnow = System.currentTimeMillis();
 		tbeg = tnow;
 		
 		while(tnow < tend )
 		{
+			tnow = System.currentTimeMillis();
 			switch(rand())
 			{
 				case 1:
 					Kontostand_TX(stmt, r.nextInt(10000)+1);
-					tnow = System.currentTimeMillis(); 
-					if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
-						iTxCount++;
 					break;
 				case 2:
 					Einzahlungs_TX(stmt, r.nextInt(10000)+1, r.nextInt(10000)+1, r.nextInt(10000)+1, r.nextInt(10000)+1);
-					if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
-						iTxCount++;
 					break;
 				case 3:
 					Analyse_TX(stmt, r.nextInt(10000)+1);
-					if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
-						iTxCount++;
 					break;
+			}
+			if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
+				iTxCount++;
+			int xx = (iGesamtZeit - (int)(tend-tnow))*100/iGesamtZeit;
+			if(xx > iPercent)
+			{
+				if(xx%2 == 0)
+					System.out.print("=");
+				iPercent = xx;
 			}
 			try {
 				Thread.sleep(50);
 			} catch (InterruptedException e) 
 			{
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
-		
+		System.out.println("|\n\n");
 		System.out.println("Tx  : " + iTxCount);
 		System.out.println("TxPS: "+ (double)((double)iTxCount/((double)(iAusschwingZeit-iEinschwingZeit)/1000)));
 		stmt.close();
