@@ -1,3 +1,5 @@
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -7,12 +9,14 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
 public class Connect implements Runnable
 {
+	//Global
 	private Boolean bRun;
 	private Thread runner;
 	private ServerSocket ss;
@@ -23,14 +27,18 @@ public class Connect implements Runnable
 	
 	public Connect() throws SQLException, ClassNotFoundException, IOException
 	{
-		bRun = false;
-		doSome();
+		bRun = true;
 		runner = new Thread(this);
+		Clients = new ArrayList<Socket>();
+		Outputs = new ArrayList<ObjectOutputStream>();
+		Inputs = new ArrayList<ObjectInputStream>();
+		doSome();
 	}
 	
 	public void doSome() throws SQLException, IOException, ClassNotFoundException
 	{
 		int iTxCount = 0;
+		 int iPercent = 0;
 		long tnow, tend, tbeg;
 		Boolean bIsServer = false;
 		java.sql.Statement stmt = null;
@@ -45,21 +53,24 @@ public class Connect implements Runnable
 		String DB = "benchmark";
 		System.out.print("DB-Server  : ");
 		String ConnectionName = "jdbc:mysql://"+scr.nextLine()+"/" + DB;
-		System.out.print("Data-Server:");
+		System.out.print("Data-Server: ");
 		try
 		{
 			Client = new Socket(scr.nextLine(), 1235);
+			System.out.println("Connect as client");
 		}
 		catch(Exception e)
 		{
+			System.out.println("Connect as server");
 			bIsServer = true;
+			ss = new ServerSocket(1235);
 			runner.start();
 		}
 		
 		
 		if(bIsServer)
 		{
-			scr.next();
+			System.in.read();
 			bRun = false;
 			for(int i=0;i<Outputs.size();i++)
 			{
@@ -69,8 +80,10 @@ public class Connect implements Runnable
 		else
 		{
 			ObjectInputStream ois = new ObjectInputStream(Client.getInputStream());
-			while((String)ois.readObject() != "Go");
+			ois.readObject();
+			System.out.println("");
 		}
+		System.out.println("Server sended go");
 		scr.close();
 		Connection con = DriverManager.getConnection(ConnectionName, user, pass);
 		stmt = con.createStatement();
@@ -78,6 +91,7 @@ public class Connect implements Runnable
 		//Commit der Datenbank erst am Ende der Operationen
 		//con.setAutoCommit(false);
 		//create_table(stmt);
+		System.out.print("|1%_____________________50%____________________100%|\n|");
 		delete_tables(stmt);
 		Random r = new Random();
 		tend = System.currentTimeMillis() + iGesamtZeit;
@@ -86,25 +100,28 @@ public class Connect implements Runnable
 		
 		while(tnow < tend )
 		{
+			tnow = System.currentTimeMillis(); 
 			switch(rand())
 			{
 				case 1:
 					Kontostand_TX(stmt, r.nextInt(10000)+1);
-					tnow = System.currentTimeMillis(); 
-					if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
-						iTxCount++;
 					break;
 				case 2:
 					Einzahlungs_TX(stmt, r.nextInt(10000)+1, r.nextInt(10000)+1, r.nextInt(10000)+1, r.nextInt(10000)+1);
-					if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
-						iTxCount++;
 					break;
 				case 3:
 					Analyse_TX(stmt, r.nextInt(10000)+1);
-					if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
-						iTxCount++;
 					break;
 			}
+			if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
+				iTxCount++;
+			int xx = (iGesamtZeit - (int)(tend-tnow))*100/iGesamtZeit;
+			if(xx > iPercent)
+            {
+                    if(xx%2 == 0)
+                            System.out.print("=");
+                    iPercent = xx;
+            }
 			try 
 			{
 				Thread.sleep(50);
@@ -114,22 +131,37 @@ public class Connect implements Runnable
 				e.printStackTrace();
 			}
 		}
+		System.out.println("|\n\n");
 		if(bIsServer)
 		{
 			int txCount = 0;
+			try 
+			{
+				Thread.sleep(1000);
+			}
+			catch (InterruptedException e) 
+			{
+				e.printStackTrace();
+			}
 			for(ObjectInputStream is : Inputs)
 			{
-				txCount += Integer.parseInt((String)is.readObject());
+				DataInputStream dit = new DataInputStream(is);
+				txCount += dit.readInt();
 			}
 			System.out.println("Tx  : " + (iTxCount + txCount));
-			System.out.printf("TxPS: %4.2f", (iTxCount + txCount)/((iAusschwingZeit-iEinschwingZeit)/1000));
+			System.out.println("TxPS: "+  ((iTxCount + txCount) / ((iAusschwingZeit-iEinschwingZeit)/1000))   );
 		}
 		else
 		{
 			ObjectOutputStream oss = new ObjectOutputStream(Client.getOutputStream());
-			oss.writeObject(String.valueOf(iTxCount));
+			DataOutputStream dot = new DataOutputStream(oss);
+			dot.writeInt(iTxCount);
+			dot.close();
 			oss.close();
+			System.out.println("Ended");
+			//System.in.read();
 		}
+
 		
 		for(int i=0;i<Clients.size();i++)
 		{
@@ -177,16 +209,9 @@ public class Connect implements Runnable
 	
 	public static int Einzahlungs_TX(java.sql.Statement stmt, int ACCID, int TELLERID, int BRANCHID, int DELTA) throws SQLException
 	{
-		stmt.executeUpdate("update branches set balance=balance+"+DELTA+" where branchid="+BRANCHID+";");
-		stmt.executeUpdate("update tellers set balance=balance+"+DELTA+" where tellerid="+TELLERID+";");
-		stmt.executeUpdate("update accounts set balance=balance+"+DELTA+" where accid="+ACCID+";");
-		ResultSet rs = stmt.executeQuery("select balance from accounts where accid="+ACCID+";");
-		stmt.setQueryTimeout(998493834);
+		ResultSet rs = stmt.executeQuery("SELECT Einzahlungs_TX("+ACCID+","+TELLERID+","+BRANCHID+","+DELTA+");");
 		rs.first();
-		int newbalance = rs.getInt(1) + DELTA;
-		stmt.executeUpdate("insert into history values ("+ ACCID +","+ TELLERID +","+ DELTA +","+ BRANCHID +","+ newbalance +",'Einzahlung')");
-		
-		return newbalance;
+		return rs.getInt(1) + DELTA;
 	}
 	
 	public static int Analyse_TX(java.sql.Statement stmt, int DELTA) throws SQLException
@@ -210,9 +235,9 @@ public class Connect implements Runnable
 	public static void main(String[] args) throws SQLException
 	{
 		try {
+			@SuppressWarnings("unused")
 			Connect conc = new Connect();
 		} catch (ClassNotFoundException | IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
