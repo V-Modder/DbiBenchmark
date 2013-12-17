@@ -70,6 +70,7 @@ public class Connect implements Runnable
 		
 		if(bIsServer)
 		{
+			System.out.println("Press enter to start...");
 			System.in.read();
 			bRun = false;
 			for(int i=0;i<Outputs.size();i++)
@@ -81,16 +82,13 @@ public class Connect implements Runnable
 		{
 			ObjectInputStream ois = new ObjectInputStream(Client.getInputStream());
 			ois.readObject();
-			System.out.println("");
+			System.out.println("\n");
 		}
 		System.out.println("Server sended go");
 		scr.close();
 		Connection con = DriverManager.getConnection(ConnectionName, user, pass);
 		stmt = con.createStatement();
 		
-		//Commit der Datenbank erst am Ende der Operationen
-		//con.setAutoCommit(false);
-		//create_table(stmt);
 		System.out.print("|1%_____________________50%____________________100%|\n|");
 		delete_tables(stmt);
 		Random r = new Random();
@@ -135,6 +133,7 @@ public class Connect implements Runnable
 		if(bIsServer)
 		{
 			int txCount = 0;
+			
 			try 
 			{
 				Thread.sleep(1000);
@@ -147,7 +146,18 @@ public class Connect implements Runnable
 			{
 				DataInputStream dit = new DataInputStream(is);
 				txCount += dit.readInt();
+				dit.close();
+				is.close();
 			}
+			for(ObjectOutputStream os : Outputs)
+			{
+				os.close();
+			}
+			for(Socket s : Clients)
+			{
+				s.close();
+			}
+			
 			System.out.println("Tx  : " + (iTxCount + txCount));
 			System.out.println("TxPS: "+  ((iTxCount + txCount) / ((iAusschwingZeit-iEinschwingZeit)/1000))   );
 		}
@@ -159,7 +169,6 @@ public class Connect implements Runnable
 			dot.close();
 			oss.close();
 			System.out.println("Ended");
-			//System.in.read();
 		}
 
 		
