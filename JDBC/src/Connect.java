@@ -64,9 +64,9 @@ public class Connect implements Runnable
 		Socket Client = null;
 		Scanner scr = new Scanner(System.in);
 		//Init final vars 
-		final int iGesamtZeit = 60000;
-		final int iEinschwingZeit = 24000;
-		final int iAusschwingZeit = 54000;
+		final int iGesamtZeit = 600000;
+		final int iEinschwingZeit = 240000;
+		final int iAusschwingZeit = 540000;
 		String user = "root";
 		String pass = "janbe2013";
 		String DB = "benchmark";
