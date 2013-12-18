@@ -188,7 +188,7 @@ public class Connect implements Runnable
 	
 	/** 
     * Wartet auf neue Clienten.
-    * Wenn eine verbindung zu einem Clienten hergestellt wurde,
+    * Wenn eine Verbindung zu einem Clienten hergestellt wurde,
     * wird er und seine Streams in separate Listen eingereiht 
     */
 	public void run()
@@ -245,7 +245,7 @@ public class Connect implements Runnable
 	}
 	
 	/** 
-	* Zahlt in ein konto ein
+	* Zahlt in ein Konto ein
 	* 
 	* @param stmt Das SQL-Statement, was mit dem DB-Server verbunden ist
 	* @param ACCID Der Account, von dem der Kontostand geholt werden soll
@@ -267,7 +267,7 @@ public class Connect implements Runnable
 	* 
 	* @param stmt Das SQL-Statement, was mit dem DB-Server verbunden ist
 	* @param DELTA Das DELTA, welches in history gesucht werden soll
-	* @return Anzahl der gefundenen Ergebnisse
+	* @return Anzahl Der gefundenen Ergebnisse
 	* @throws SQLException Fehler beim Verarbeiten
 	*/
 	public static int Analyse_TX(java.sql.Statement stmt, int DELTA) throws SQLException
@@ -278,7 +278,7 @@ public class Connect implements Runnable
 	}
 	
 	/**
-	 * Diese Methode gibt eine Gewichtet Zufallszahl zwischen 1 und 3 zurück,
+	 * Diese Methode gibt eine gewichtet Zufallszahl zwischen 1 und 3 zurück,
 	 * mit einer Gewichtung von (35 : 50 : 15)
 	 * 
 	 * @return Gewichtete Zufallszahl
