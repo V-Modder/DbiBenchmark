@@ -1,8 +1,8 @@
+import java.io.BufferedReader;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Connection;
@@ -14,6 +14,15 @@ import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
+/**
+ * Dies ist der Load-Driver zur DBI-Praktikumsaufgbe 9
+ * Es enh‰lt den Clienten und Server
+ * 
+ * @author Benedikt Oppenberg, Jannik Ewers
+ * @version 1.0
+ */
+
+
 public class Connect implements Runnable
 {
 	//Global
@@ -21,30 +30,40 @@ public class Connect implements Runnable
 	private Thread runner;
 	private ServerSocket ss;
 	private List<Socket> Clients;
-	private List<ObjectOutputStream> Outputs;
-	private List<ObjectInputStream> Inputs;
+	private List<InputStreamReader> Inputs;
+	private List<PrintStream> Outputs;
 	
-	
+
+
+    /** 
+     * Konstruktor
+     */
 	public Connect() throws SQLException, ClassNotFoundException, IOException
 	{
+		//Init
 		bRun = true;
 		runner = new Thread(this);
 		Clients = new ArrayList<Socket>();
-		Outputs = new ArrayList<ObjectOutputStream>();
-		Inputs = new ArrayList<ObjectInputStream>();
+		Inputs = new ArrayList<InputStreamReader>();
+		Outputs = new ArrayList<PrintStream>();
 		doSome();
 	}
 	
+	/** 
+     * Steuerung des Load-Drivers
+     * Erzueugung des Clienten und/oder Servers
+     */
 	public void doSome() throws SQLException, IOException, ClassNotFoundException
 	{
+		//Init local vars
 		int iTxCount = 0;
-		 int iPercent = 0;
+		int iPercent = 0;
 		long tnow, tend, tbeg;
 		Boolean bIsServer = false;
 		java.sql.Statement stmt = null;
 		Socket Client = null;
-		
 		Scanner scr = new Scanner(System.in);
+		//Init final vars 
 		final int iGesamtZeit = 60000;
 		final int iEinschwingZeit = 24000;
 		final int iAusschwingZeit = 54000;
@@ -56,41 +75,51 @@ public class Connect implements Runnable
 		System.out.print("Data-Server: ");
 		try
 		{
+			//Versucht eine Verbindung zu dem Messdaten-Server aufzubauen
 			Client = new Socket(scr.nextLine(), 1235);
 			System.out.println("Connect as client");
 		}
 		catch(Exception e)
 		{
+			//Falls keine Verbindung hergestellt werden kann wird ein Server erstellt
 			System.out.println("Connect as server");
 			bIsServer = true;
 			ss = new ServerSocket(1235);
+			//Starte Thread
 			runner.start();
 		}
 		
 		
 		if(bIsServer)
 		{
+			//Warten bis alle Clients verbunden sind
 			System.out.println("Press enter to start...");
 			System.in.read();
+			//Thread schlieﬂen
 			bRun = false;
-			for(int i=0;i<Outputs.size();i++)
+			new Socket(ss.getInetAddress(), ss.getLocalPort()).close();
+			//Allen Clienten das Startsignal senden
+			for(PrintStream ps : Outputs)
 			{
-				Outputs.get(i).writeObject("Go");
+				ps.print("Go");
 			}
 		}
 		else
 		{
-			ObjectInputStream ois = new ObjectInputStream(Client.getInputStream());
-			ois.readObject();
+			//Auf das Startsignal warten
+			DataInputStream ois = new DataInputStream(Client.getInputStream());
+			ois.read();
 			System.out.println("\n");
 		}
 		System.out.println("Server sended go");
-		scr.close();
+		
+		//Verbindung zum DB-Server herstellen
 		Connection con = DriverManager.getConnection(ConnectionName, user, pass);
 		stmt = con.createStatement();
 		
 		System.out.print("|1%_____________________50%____________________100%|\n|");
-		delete_tables(stmt);
+		//Tabelle history leeren
+		trunc_table(stmt);
 		Random r = new Random();
 		tend = System.currentTimeMillis() + iGesamtZeit;
 		tnow = System.currentTimeMillis();
@@ -113,86 +142,72 @@ public class Connect implements Runnable
 			}
 			if((tnow - tbeg) > iEinschwingZeit && (tnow - tbeg) < iAusschwingZeit)
 				iTxCount++;
-			int xx = (iGesamtZeit - (int)(tend-tnow))*100/iGesamtZeit;
-			if(xx > iPercent)
+			int progress = (iGesamtZeit - (int)(tend-tnow))*100/iGesamtZeit;
+			if(progress > iPercent)
             {
-                    if(xx%2 == 0)
+                    if(progress%2 == 0)
                             System.out.print("=");
-                    iPercent = xx;
+                    iPercent = progress;
             }
-			try 
-			{
-				Thread.sleep(50);
-			}
-			catch (InterruptedException e) 
-			{
-				e.printStackTrace();
-			}
+			//Nachdenkzeit
+			try {Thread.sleep(50);}catch (InterruptedException e) {e.printStackTrace();}
 		}
 		System.out.println("|\n\n");
+		
 		if(bIsServer)
 		{
+			//Auf die Clienten Warten
+			try {Thread.sleep(5000);}catch (InterruptedException e){e.printStackTrace();}
 			int txCount = 0;
-			
-			try 
+			//Daten von den Clienten holen
+			for(InputStreamReader dis : Inputs)
 			{
-				Thread.sleep(1000);
-			}
-			catch (InterruptedException e) 
-			{
-				e.printStackTrace();
-			}
-			for(ObjectInputStream is : Inputs)
-			{
-				DataInputStream dit = new DataInputStream(is);
-				txCount += dit.readInt();
-				dit.close();
-				is.close();
-			}
-			for(ObjectOutputStream os : Outputs)
-			{
-				os.close();
-			}
-			for(Socket s : Clients)
-			{
-				s.close();
+				BufferedReader bufferedReader = new BufferedReader(dis);
+				char[] buffer = new char[20];
+		        int anzahlZeichen = bufferedReader.read(buffer, 0, 20);
+		        String nachricht = new String(buffer, 0, anzahlZeichen);
+		        txCount += Integer.parseInt(nachricht);
 			}
 			
-			System.out.println("Tx  : " + (iTxCount + txCount));
-			System.out.println("TxPS: "+  ((iTxCount + txCount) / ((iAusschwingZeit-iEinschwingZeit)/1000))   );
+			System.out.println("Cleints: " + (Clients.size()+1));
+			System.out.println("Tx     : " + (iTxCount + txCount));
+			System.out.println("TxPS   : "+  ((iTxCount + txCount) / ((iAusschwingZeit-iEinschwingZeit)/1000))   );
 		}
 		else
 		{
-			ObjectOutputStream oss = new ObjectOutputStream(Client.getOutputStream());
-			DataOutputStream dot = new DataOutputStream(oss);
-			dot.writeInt(iTxCount);
-			dot.close();
-			oss.close();
+			//Daten an den Server senden
+			PrintStream dot = new PrintStream(Client.getOutputStream());
+			dot.print(iTxCount);
 			System.out.println("Ended");
+			scr.next();
 		}
-
-		
-		for(int i=0;i<Clients.size();i++)
-		{
-			Outputs.get(i).close();
-			Inputs.get(i).close();
-			Clients.get(i).close();
-		}
+		scr.close();
 		stmt.close();
 		con.close();
 	}
 	
+	/** 
+    * Wartet auf neue Clienten.
+    * Wenn eine verbindung zu einem Clienten hergestellt wurde,
+    * wird er und seine Streams in separate Listen eingereiht 
+    */
 	public void run()
 	{
 		while(bRun)
 		{
 			try 
 			{
-				Clients.add(ss.accept());
-				ObjectOutputStream os = new ObjectOutputStream(Clients.get(Clients.size()-1).getOutputStream());
-				Outputs.add(os);
-				ObjectInputStream is = new ObjectInputStream(Clients.get(Clients.size()-1).getInputStream());
-				Inputs.add(is);
+				Clients.add(Clients.size(), ss.accept());
+				if(bRun)
+				{
+					Inputs.add(Inputs.size(), new InputStreamReader( Clients.get(Clients.size()-1).getInputStream()));				
+					Outputs.add(Outputs.size(), new PrintStream( Clients.get(Clients.size()-1).getOutputStream()));
+					System.out.println("Client connected " + Clients.size());
+				}
+				else
+				{
+					Clients.remove(Clients.size()-1);
+				}
 			} 
 			catch (Exception e) 
 			{
@@ -201,7 +216,12 @@ public class Connect implements Runnable
 		}
 	}
 	
-	public static void delete_tables(java.sql.Statement stmt) throws SQLException
+	/** 
+	* Leert die Tabelle history und setzt Systemvariablen im DBMS
+	* 
+	* @param stmt Das SQL-Statement, was mit dem DB-Server verbunden ist
+	*/
+	public static void trunc_table(java.sql.Statement stmt) throws SQLException
 	{
 		stmt.execute("TRUNCATE TABLE history");
 		stmt.execute("SET FOREIGN_KEY_CHECKS = 0;");
@@ -209,6 +229,14 @@ public class Connect implements Runnable
 		stmt.execute("SET sql_log_bin = 0");
 	}
 	
+	/** 
+	* Holt den Kontostand des Accounts von der DB
+	* 
+	* @param stmt Das SQL-Statement, was mit dem DB-Server verbunden ist
+	* @param ACCID Die accid, von dem der kontostand geholt werden soll
+	* @return Kontostand des Accounts
+	* @throws SQLException Fehler beim Verarbeiten
+	*/
 	public static int Kontostand_TX(java.sql.Statement stmt, int ACCID) throws SQLException
 	{
 		ResultSet rs = stmt.executeQuery("select balance from accounts where accid="+ACCID+";");
@@ -216,6 +244,17 @@ public class Connect implements Runnable
 		return rs.getInt(1);
 	}
 	
+	/** 
+	* Zahlt in ein konto ein
+	* 
+	* @param stmt Das SQL-Statement, was mit dem DB-Server verbunden ist
+	* @param ACCID Der Account, von dem der Kontostand geholt werden soll
+	* @param TELLERID  ID des Geldautomaten
+	* @param BRANCHID ID der Zweigstelle
+	* @param DELTA Betrag der Einzahlung
+	* @return Kontostand des Accounts
+	* @throws SQLException Fehler beim Verarbeiten
+	*/
 	public static int Einzahlungs_TX(java.sql.Statement stmt, int ACCID, int TELLERID, int BRANCHID, int DELTA) throws SQLException
 	{
 		ResultSet rs = stmt.executeQuery("SELECT Einzahlungs_TX("+ACCID+","+TELLERID+","+BRANCHID+","+DELTA+");");
@@ -223,6 +262,14 @@ public class Connect implements Runnable
 		return rs.getInt(1) + DELTA;
 	}
 	
+	/** 
+	* Holt die Anzahl der Eintrage in history mit dem gegebene DELTA von der DB
+	* 
+	* @param stmt Das SQL-Statement, was mit dem DB-Server verbunden ist
+	* @param DELTA Das DELTA, welches in history gesucht werden soll
+	* @return Anzahl der gefundenen Ergebnisse
+	* @throws SQLException Fehler beim Verarbeiten
+	*/
 	public static int Analyse_TX(java.sql.Statement stmt, int DELTA) throws SQLException
 	{
 		ResultSet rs = stmt.executeQuery("select count(accid) from benchmark.history where delta="+ DELTA +";");
@@ -230,6 +277,12 @@ public class Connect implements Runnable
 		return rs.getInt(1);
 	}
 	
+	/**
+	 * Diese Methode gibt eine Gewichtet Zufallszahl zwischen 1 und 3 zur¸ck,
+	 * mit einer Gewichtung von (35 : 50 : 15)
+	 * 
+	 * @return Gewichtete Zufallszahl
+	 */
 	private static int rand()
 	{
 		Random rnd = new Random();
@@ -241,6 +294,12 @@ public class Connect implements Runnable
 		return 3;
 	}
 	
+	/**
+	 * Erzeugt ein neues Object von der Connect Klasse
+	 * 
+	 * @param args	Kommandozeilenparameter
+	 * @throws SQLException Fehler beim Verarbeiten
+	 */
 	public static void main(String[] args) throws SQLException
 	{
 		try {
