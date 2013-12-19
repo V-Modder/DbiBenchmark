@@ -16,7 +16,7 @@ import java.util.Scanner;
 
 /**
  * Dies ist der Load-Driver zur DBI-Praktikumsaufgbe 9
- * Es enhält den Clienten und Server
+ * Er enhält den Clienten und Server
  * 
  * @author Benedikt Oppenberg, Jannik Ewers
  * @version 1.0
@@ -52,6 +52,10 @@ public class Connect implements Runnable
 	/** 
      * Steuerung des Load-Drivers
      * Erzueugung des Clienten und/oder Servers
+     * 
+     * throws SQLException Fehler beim Verarbeiten
+     * throws IOException Socket IOException
+     * throws ClassNotFoundException
      */
 	public void doSome() throws SQLException, IOException, ClassNotFoundException
 	{
@@ -224,8 +228,6 @@ public class Connect implements Runnable
 	public static void trunc_table(java.sql.Statement stmt) throws SQLException
 	{
 		stmt.execute("TRUNCATE TABLE history");
-		stmt.execute("SET FOREIGN_KEY_CHECKS = 0;");
-		stmt.execute("SET UNIQUE_CHECKS = 0;");
 		stmt.execute("SET sql_log_bin = 0");
 	}
 	
